@@ -1,5 +1,5 @@
 use crate::expression::expression::Exp;
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use std::collections::HashMap;
 
 macro_rules! check_sequence_order {
@@ -70,6 +70,31 @@ impl Default for Env {
         data.insert(
             ">=".to_string(),
             Exp::Func(check_sequence_order!(|a, b| a >= b)),
+        );
+
+        data.insert(
+            "if".to_string(),
+            Exp::Func(|args| {
+                let condition = args
+                    .first()
+                    .ok_or_else(|| anyhow!("Condition expected to follow 'if'"))?;
+                match condition {
+                    Exp::Boolean(bool) => {
+                        if *bool {
+                            let true_case = args
+                                .get(1)
+                                .ok_or_else(|| anyhow!("Expected an expression"))?;
+                            return Ok(true_case.to_owned());
+                        } else {
+                            let false_case = args
+                                .get(2)
+                                .ok_or_else(|| anyhow!("Expected an expression"))?;
+                            return Ok(false_case.to_owned());
+                        }
+                    }
+                    _ => bail!("Condition expected!"),
+                }
+            }),
         );
 
         return Self { data };

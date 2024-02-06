@@ -7,11 +7,12 @@ use env::env::Env;
 use expression::expression::Exp;
 use token::token::{parse_tokens, tokenize};
 
+// "(+ 10 5)".to_string();
+// "( + (- 2 1) (+ 10 5))".to_string();
+// "(+ 8 (- 5 4) (+ 4 2))".to_string();
+// "( + (- 2 1) (+ 10 5)) (- ( + 1 1) (- 4 4))".to_string();
+
 fn main() -> Result<()> {
-    // let ex = "(+ 10 5)".to_string();
-    // let exp = "(+ 8 (- 5 4) (+ 4 2)".to_string();
-    // let exp_2 = "( + (- 2 1) (+ 10 5))".to_string();
-    // let exp_3 = "( + (- 2 1) (+ 10 5)) (- ( + 1 1) (- 4 4)  )".to_string();
     let mut default_env = Env::default();
     loop {
         println!(">>>");
@@ -35,8 +36,8 @@ fn run(input: String, env: &mut Env) -> Result<Exp> {
     Ok(res)
 }
 
-fn eval(exp: &Exp, env: &mut Env) -> Result<Exp> {
-    match exp {
+fn eval(expression: &Exp, env: &mut Env) -> Result<Exp> {
+    match expression {
         Exp::Symbol(symbol) => {
             let operation = env
                 .data
@@ -75,4 +76,6 @@ fn eval(exp: &Exp, env: &mut Env) -> Result<Exp> {
 
 /* enum MyErr {
     Reason(String),
+    Thing(Wat),
+    Position(usize, usize),
 } */

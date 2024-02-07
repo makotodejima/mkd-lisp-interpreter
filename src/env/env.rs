@@ -75,22 +75,16 @@ impl Default for Env {
         data.insert(
             "if".to_string(),
             Exp::Func(|args| {
-                let condition = args
+                let test = args
                     .first()
                     .ok_or_else(|| anyhow!("Condition expected to follow 'if'"))?;
-                match condition {
+                match test {
                     Exp::Boolean(bool) => {
-                        if *bool {
-                            let true_case = args
-                                .get(1)
-                                .ok_or_else(|| anyhow!("Expected an expression"))?;
-                            return Ok(true_case.to_owned());
-                        } else {
-                            let false_case = args
-                                .get(2)
-                                .ok_or_else(|| anyhow!("Expected an expression"))?;
-                            return Ok(false_case.to_owned());
-                        }
+                        let idx = if *bool { 1 } else { 2 };
+                        let exp = args
+                            .get(idx)
+                            .ok_or_else(|| anyhow!("Expected an expression"))?;
+                        return Ok(exp.to_owned());
                     }
                     _ => bail!("Condition expected!"),
                 }

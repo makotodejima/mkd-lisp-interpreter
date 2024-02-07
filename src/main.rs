@@ -1,11 +1,5 @@
-mod env;
-mod expression;
-mod token;
-
-use anyhow::{anyhow, Result};
-use env::env::Env;
-use expression::expression::Exp;
-use token::token::{parse_tokens, tokenize};
+use anyhow::Result;
+use mkd_lang::{env::env::Env, run};
 
 // "(+ 10 5)".to_string();
 // "( + (- 2 1) (+ 10 5))".to_string();
@@ -28,54 +22,3 @@ fn main() -> Result<()> {
         }
     }
 }
-
-fn run(input: String, env: &mut Env) -> Result<Exp> {
-    let parsed = parse_tokens(tokenize(input))?;
-    // println!("Parsed: {}", out);
-    let res = eval(&parsed, env)?;
-    Ok(res)
-}
-
-fn eval(expression: &Exp, env: &mut Env) -> Result<Exp> {
-    match expression {
-        Exp::Symbol(symbol) => {
-            let operation = env
-                .data
-                .get(symbol)
-                .ok_or_else(|| anyhow!("Unexpected symbol: {}", symbol))?;
-            return Ok(operation.to_owned());
-        }
-        Exp::Number(num) => Ok(Exp::Number(*num)),
-        Exp::Boolean(bool) => Ok(Exp::Boolean(*bool)),
-        Exp::List(list) => {
-            let first = list
-                .first()
-                .ok_or_else(|| anyhow!("No item found in the list"))?;
-
-            match eval(first, env)? {
-                Exp::Func(operation) => {
-                    let args = list
-                        .iter()
-                        .skip(1)
-                        .map(|x| eval(x, env))
-                        .collect::<Result<Vec<_>>>()?;
-                    return operation(&args);
-                }
-                _ => {
-                    let items = list
-                        .iter()
-                        .map(|x| eval(x, env))
-                        .collect::<Result<Vec<_>>>()?;
-                    return Ok(Exp::List(items));
-                }
-            }
-        }
-        Exp::Func(_) => Err(anyhow!("Unexpected function expression")),
-    }
-}
-
-/* enum MyErr {
-    Reason(String),
-    Thing(Wat),
-    Position(usize, usize),
-} */

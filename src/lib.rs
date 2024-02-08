@@ -14,6 +14,11 @@ pub fn run(input: String, env: &mut Env) -> Result<Exp> {
     Ok(res)
 }
 
+// struct Lambda {
+//     params: Rc<Exp>,
+//     body: Rc<Exp>,
+// }
+
 fn eval(expression: &Exp, env: &mut Env) -> Result<Exp> {
     match expression {
         Exp::Symbol(symbol) => {
@@ -57,9 +62,7 @@ fn eval(expression: &Exp, env: &mut Env) -> Result<Exp> {
 }
 
 fn handle_keyword(expression: &Exp, args: &[Exp], env: &mut Env) -> Result<Option<Exp>> {
-    println!("handle_keyword {}", expression);
     if let Exp::Symbol(keyword) = expression {
-        println!("keyword {}", keyword);
         match keyword.as_str() {
             "def" => {
                 let first = args

@@ -9,15 +9,9 @@ use token::token::{parse_tokens, tokenize};
 
 pub fn run(input: String, env: &mut Env) -> Result<Exp> {
     let parsed = parse_tokens(tokenize(input))?;
-    // println!("Parsed: {}", out);
     let res = eval(&parsed, env)?;
     Ok(res)
 }
-
-// struct Lambda {
-//     params: Rc<Exp>,
-//     body: Rc<Exp>,
-// }
 
 fn eval(expression: &Exp, env: &mut Env) -> Result<Exp> {
     match expression {
@@ -31,18 +25,16 @@ fn eval(expression: &Exp, env: &mut Env) -> Result<Exp> {
         Exp::Number(num) => Ok(Exp::Number(*num)),
         Exp::Boolean(bool) => Ok(Exp::Boolean(*bool)),
         Exp::List(list) => {
-            let first = list
-                .first()
-                .ok_or_else(|| anyhow!("No item found in the list"))?;
-            let rest: Vec<Exp> = list.iter().skip(1).cloned().collect();
-            if let Some(keyword_result) = handle_keyword(first, &rest, env)? {
+            let (first, rest) = list
+                .split_first()
+                .ok_or_else(|| anyhow!("Failed to parse list items"))?;
+            if let Some(keyword_result) = try_builtin_keyword(first, &rest, env)? {
                 return Ok(keyword_result);
             } else {
                 match eval(first, env)? {
                     Exp::Func(operation) => {
-                        let args = list
+                        let args = rest
                             .iter()
-                            .skip(1)
                             .map(|x| eval(x, env))
                             .collect::<Result<Vec<_>>>()?;
                         return operation(&args);
@@ -61,7 +53,7 @@ fn eval(expression: &Exp, env: &mut Env) -> Result<Exp> {
     }
 }
 
-fn handle_keyword(expression: &Exp, args: &[Exp], env: &mut Env) -> Result<Option<Exp>> {
+fn try_builtin_keyword(expression: &Exp, args: &[Exp], env: &mut Env) -> Result<Option<Exp>> {
     if let Exp::Symbol(keyword) = expression {
         match keyword.as_str() {
             "def" => {

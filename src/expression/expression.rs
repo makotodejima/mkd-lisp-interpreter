@@ -29,8 +29,8 @@ impl Exp {
 impl Display for Exp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Exp::Symbol(v) => write!(f, "S({})", v),
-            Exp::Number(v) => write!(f, "N({})", v),
+            Exp::Symbol(v) => write!(f, "{}", v),
+            Exp::Number(v) => write!(f, "{}", v),
             Exp::Boolean(v) => write!(f, "Bool({})", v),
             Exp::List(values) => {
                 write!(f, "[")?;

@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use std::fmt::Display;
+use std::{fmt::Display, rc::Rc};
 
 #[derive(Clone)]
 pub enum Exp {
@@ -8,6 +8,13 @@ pub enum Exp {
     Boolean(bool),
     List(Vec<Exp>),
     Func(fn(&[Exp]) -> Result<Exp>),
+    Lambda(Lambda),
+}
+
+#[derive(Clone)]
+pub struct Lambda {
+    pub params: Rc<Exp>,
+    pub body: Rc<Exp>,
 }
 
 impl Exp {
@@ -36,6 +43,7 @@ impl Display for Exp {
                 write!(f, "]")
             }
             Exp::Func(_) => write!(f, "Func(<fn>)"),
+            Exp::Lambda(lambda) => write!(f, "Lambda({} => {})", lambda.params, lambda.body),
         }
     }
 }

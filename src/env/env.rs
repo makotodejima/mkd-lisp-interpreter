@@ -1,6 +1,6 @@
 use crate::expression::expression::Exp;
 use anyhow::{anyhow, bail, Result};
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 macro_rules! check_sequence_order {
     ($check_fn:expr) => {{
@@ -22,12 +22,24 @@ macro_rules! check_sequence_order {
     }};
 }
 
+#[derive(Clone)]
 pub struct Env {
     pub data: HashMap<String, Exp>,
+    pub parent: Option<Box<Env>>,
+}
+
+impl Env {
+    pub fn get_var(&self, symbol: &str) -> Option<Exp> {
+        return self.data.get(symbol).cloned().or_else(|| {
+            self.parent
+                .as_ref()
+                .and_then(|parent| parent.get_var(symbol))
+        });
+    }
 }
 
 impl Default for Env {
-    fn default() -> Self {
+    fn default() -> Env {
         let mut data: HashMap<String, Exp> = HashMap::new();
 
         data.insert(
@@ -48,10 +60,10 @@ impl Default for Env {
                     .iter()
                     .map(|x| x.as_f64())
                     .collect::<Result<Vec<_>>>()?;
-                let first = floats.first().ok_or_else(|| {
-                    anyhow!("Could not get the first element for the subtraction")
-                })?;
-                return Ok(Exp::Number(first - floats.iter().skip(1).sum::<f64>()));
+                let (first, rest) = floats
+                    .split_first()
+                    .ok_or_else(|| anyhow!("Could not parse floats for the subtraction"))?;
+                return Ok(Exp::Number(first - rest.iter().sum::<f64>()));
             }),
         );
 
@@ -91,6 +103,6 @@ impl Default for Env {
             }),
         );
 
-        return Self { data };
+        return Env { data, parent: None };
     }
 }

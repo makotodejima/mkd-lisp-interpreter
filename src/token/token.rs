@@ -9,8 +9,7 @@ pub fn parse_tokens(tokens: Vec<String>) -> Result<Exp> {
     return Ok(exp);
 }
 
-// tokenize("(+ 10 5)") //=> ["(", "+", "10", "5", ")"]
-// tokenize("( +( + (- 2 1) (+ 10 5) ( - ( + 1 1) (- 4 4) ) )") //=> ["(", "+", "(", "-", "2", "1", ")", "(", "+" "10", "5", ")", ")"]
+// "(+ 10 5)" -> "(", "+", "10", "5", ")"
 pub fn tokenize(input: String) -> Vec<String> {
     return input
         .replace("(", " ( ")

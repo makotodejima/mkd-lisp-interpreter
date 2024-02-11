@@ -22,19 +22,18 @@ macro_rules! check_sequence_order {
     }};
 }
 
-#[derive(Clone)]
 pub struct Env {
     pub data: HashMap<String, Exp>,
-    pub parent: Option<Box<Env>>,
+    pub parent_env: Option<Rc<RefCell<Env>>>,
 }
 
 impl Env {
     pub fn get_var(&self, symbol: &str) -> Option<Exp> {
-        return self.data.get(symbol).cloned().or_else(|| {
-            self.parent
+        self.data.get(symbol).cloned().or_else(|| {
+            self.parent_env
                 .as_ref()
-                .and_then(|parent| parent.get_var(symbol))
-        });
+                .and_then(|parent_env| parent_env.borrow().get_var(symbol))
+        })
     }
 }
 
@@ -103,6 +102,9 @@ impl Default for Env {
             }),
         );
 
-        return Env { data, parent: None };
+        return Env {
+            data,
+            parent_env: None,
+        };
     }
 }

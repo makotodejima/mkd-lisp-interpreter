@@ -5,19 +5,20 @@ mod token;
 use anyhow::{anyhow, bail, Result};
 use env::env::Env;
 use expression::expression::{Exp, Lambda};
-use std::{collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use token::token::{parse_tokens, tokenize};
 
-pub fn run(input: String, env: &mut Env) -> Result<Exp> {
+pub fn run(input: String, env: Rc<RefCell<Env>>) -> Result<Exp> {
     let parsed = parse_tokens(tokenize(input))?;
     let res = eval(&parsed, env)?;
     Ok(res)
 }
 
-fn eval(expression: &Exp, env: &mut Env) -> Result<Exp> {
+fn eval(expression: &Exp, env: Rc<RefCell<Env>>) -> Result<Exp> {
     match expression {
         Exp::Symbol(symbol) => {
             return env
+                .borrow()
                 .get_var(symbol)
                 .ok_or_else(|| anyhow!("Unexpected symbol: {}", symbol));
         }
@@ -27,14 +28,14 @@ fn eval(expression: &Exp, env: &mut Env) -> Result<Exp> {
             let (first, rest) = list
                 .split_first()
                 .ok_or_else(|| anyhow!("Failed to parse list items"))?;
-            if let Some(keyword_result) = try_builtin_keyword(first, &rest, env)? {
+            if let Some(keyword_result) = try_builtin_keyword(first, &rest, env.clone())? {
                 return Ok(keyword_result);
             } else {
-                match eval(first, env)? {
+                match eval(first, env.clone())? {
                     Exp::Func(operation) => {
                         let args = rest
                             .iter()
-                            .map(|x| eval(x, env))
+                            .map(|x| eval(x, env.clone()))
                             .collect::<Result<Vec<_>>>()?;
                         return operation(&args);
                     }
@@ -51,11 +52,11 @@ fn eval(expression: &Exp, env: &mut Env) -> Result<Exp> {
                         };
 
                         if param_keys.len() != rest.len() {
-                            bail!("length does not match")
+                            bail!("function expected {} parameter(s)", param_keys.len())
                         }
                         let args = rest
                             .iter()
-                            .map(|x| eval(x, env))
+                            .map(|x| eval(x, env.clone()))
                             .collect::<Result<Vec<_>>>()?;
 
                         let mut data: HashMap<String, Exp> = HashMap::new();
@@ -66,16 +67,16 @@ fn eval(expression: &Exp, env: &mut Env) -> Result<Exp> {
 
                         return eval(
                             &lambda.body,
-                            &mut Env {
+                            Rc::new(RefCell::new(Env {
                                 data,
-                                parent: Some(Box::new(env.clone())),
-                            },
+                                parent_env: Some(env.clone()),
+                            })),
                         );
                     }
                     _ => {
                         let items = list
                             .iter()
-                            .map(|x| eval(x, env))
+                            .map(|x| eval(x, env.clone()))
                             .collect::<Result<Vec<_>>>()?;
                         return Ok(Exp::List(items));
                     }
@@ -87,7 +88,11 @@ fn eval(expression: &Exp, env: &mut Env) -> Result<Exp> {
     }
 }
 
-fn try_builtin_keyword(expression: &Exp, args: &[Exp], env: &mut Env) -> Result<Option<Exp>> {
+fn try_builtin_keyword(
+    expression: &Exp,
+    args: &[Exp],
+    env: Rc<RefCell<Env>>,
+) -> Result<Option<Exp>> {
     if let Exp::Symbol(keyword) = expression {
         match keyword.as_str() {
             "def" => {
@@ -102,11 +107,13 @@ fn try_builtin_keyword(expression: &Exp, args: &[Exp], env: &mut Env) -> Result<
                 if let Exp::Symbol(var_name) = first {
                     let value = args
                         .get(1)
-                        .map(|x| eval(x, env))
+                        .map(|x| eval(x, env.clone()))
                         .ok_or_else(|| anyhow!("Could not get value to be assigned"))?
                         .map_err(|e| anyhow!("Evaluation error: {}", e))?;
 
-                    env.data.insert(var_name.to_string(), value.to_owned());
+                    env.borrow_mut()
+                        .data
+                        .insert(var_name.to_string(), value.to_owned());
                     return Ok(Some(first.to_owned()));
                 }
                 bail!("Expected symbol to assign value to")
